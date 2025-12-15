@@ -33,7 +33,7 @@ institute_names_no_syn <- subset(institute_names_no_syn, select = c(`INSTCODE`, 
 WIEWS_institute_IDs <- read_excel("../../Data_processing/Support_files/FAO_WIEWS/WIEWS_instIDs.xlsx")
 WIEWS_institute_IDs = subset(WIEWS_institute_IDs, select = c('ID' , 'WIEWS_INSTCODE'))
 #read file to select institution and data source
-data_source <- read_csv("../../Data_processing/Support_files/Source_selection/selection_sources.csv")
+selection_data_sources <- read_csv("../../Data_processing/Support_files/Source_selection/selection_sources.csv")
 
 ####################################################################################################
 ########## Change field names to follow MCPD standard see https://www.fao.org/plant-treaty/tools/toolbox-for-sustainable-use/details/en/c/1367915/ ############################################
@@ -168,6 +168,26 @@ Genesys_allcrops <- Genesys_allcrops %>%
   mutate(ACCENUMB = str_replace_all(ACCENUMB, " ", ""))
 
 ####################################################################################################
+##### CREATE SELECTION DATA SOURCES TABLE #####
+source("../../Code/R_code/Functions/Select_data_source.R")
+
+selection_data_sources <- select_data_source(
+  Genesys_allcrops = Genesys_allcrops,
+  WIEWS_allcrops = WIEWS_allcrops,
+  institute_names_no_syn = institute_names_no_syn,
+  eurisco_path = "../../Data_processing/Support_files/Source_selection/EURISCO_instcodes.xlsx"
+)
+#save selection data sources table
+write.csv(selection_data_sources, "../../Data_processing/Support_files/Source_selection/selection_sources.csv", row.names = FALSE)
+                               
+# Use selection_data_sources to filter main data
+genesys_keep_inst <- selection_data_sources %>% filter(keep == "Genesys") %>% pull(INSTCODE)
+wiews_keep_inst   <- selection_data_sources %>% filter(keep == "WIEWS") %>% pull(INSTCODE)
+
+Genesys_allcrops <- Genesys_allcrops %>% filter(INSTCODE %in% genesys_keep_inst)
+WIEWS_allcrops   <- WIEWS_allcrops %>% filter(INSTCODE %in% wiews_keep_inst)                               
+                               
+####################################################################################################
 ## Combine Genesys and WIEWS data and Remove duplicates between Genesys and WIEWS, keep Genesys ##################################################
 gen_wiews_df <- bind_rows(Genesys_allcrops, WIEWS_allcrops)
 gen_wiews_df$ACCENUMB <- trimws(gen_wiews_df$ACCENUMB)
@@ -264,9 +284,11 @@ write.csv(sgsv, '../../Data_processing/1_merge_data/2025_07_07/SGSV_processed.cs
 # read in FAO WIEWS indicator file and croplist_PG within function 
 source("Functions/Load_WIEWS_indicator_data.R") # source function
 WIEWS_indicator_proccessed <- process_wiews_indicator_data(
-  wiews_path = "../../Data/FAO_WIEWS/Indicator_22_data/FAO_WIEWS_Indicator22.xlsx",
-  croplist_path = "../../Data_processing/Support_files/GCCS_Selected_crops/croplist_PG.xlsx"
+  wiews_path = "../../GCCSmetricsI/Data/FAO_WIEWS/Indicator_22_data/Wiews_Indicator_1733321439198_regenerations2014-2019.xlsx",
+  croplist_path = "../../GCCSmetricsI/Data_processing/Support_files/GCCS_Selected_crops/CropList_final.xlsx"
 )
 # save results
-write.csv(WIEWS_indicator_proccessed, '../../Data_processing/1_merge_data/2025_07_08/WIEWS_indicator_processed.csv', row.names = FALSE)
+write.csv(WIEWS_indicator_proccessed, '../../Data_processing/1_merge_data/2025_12_02_FINAL/WIEWS_indicator_processed.csv', row.names = FALSE)
 
+                               
+###### END SCRIPT ######
